@@ -8,7 +8,7 @@ const pool = new Pool({
   // Aggressive settings for Neon Serverless
   max: 6, // Keep pool small for reliability
   idleTimeoutMillis: 10000, // Drop idle connections quickly (10s)
-  connectionTimeoutMillis: 10000,
+  connectionTimeoutMillis: 20000, // 20s timeout for cold boots
 });
 
 // Critical pool error handler
@@ -30,10 +30,16 @@ pool.query = async (...args) => {
   try {
     return await originalQuery(...args);
   } catch (err) {
-    if (err.message.includes('Connection terminated unexpectedly') || err.message.includes('ECONNRESET')) {
-      console.log('🔄 Neon Connection Reset detected. Retrying query...');
-      // Wait 100ms and retry once
-      await new Promise(resolve => setTimeout(resolve, 100));
+    const isNetworkError = 
+      err.message.includes('terminated unexpectedly') || 
+      err.message.includes('ECONNRESET') ||
+      err.message.includes('connection timeout') ||
+      err.message.includes('ETIMEDOUT');
+
+    if (isNetworkError) {
+      console.log(`🔄 Neon Connection Issue (${err.message.split(':')[0]}). Retrying query...`);
+      // Wait 500ms and retry once
+      await new Promise(resolve => setTimeout(resolve, 500));
       return await originalQuery(...args);
     }
     throw err;
