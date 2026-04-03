@@ -23,4 +23,21 @@ pool.on('connect', (client) => {
   });
 });
 
+// Enhanced Query Resolver for Neon Serverless
+// This wrapper will automatically retry a query ONCE if the connection is terminated.
+const originalQuery = pool.query.bind(pool);
+pool.query = async (...args) => {
+  try {
+    return await originalQuery(...args);
+  } catch (err) {
+    if (err.message.includes('Connection terminated unexpectedly') || err.message.includes('ECONNRESET')) {
+      console.log('🔄 Neon Connection Reset detected. Retrying query...');
+      // Wait 100ms and retry once
+      await new Promise(resolve => setTimeout(resolve, 100));
+      return await originalQuery(...args);
+    }
+    throw err;
+  }
+};
+
 module.exports = pool;

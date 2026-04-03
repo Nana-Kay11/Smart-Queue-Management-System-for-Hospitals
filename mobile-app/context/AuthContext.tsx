@@ -5,8 +5,9 @@ import axios from 'axios';
 // URL for testing:
 // Android Emulator: 10.0.2.2
 // iOS Simulator: localhost
-// Real Device (Expo Go): Your computer's local IP (e.g., 10.107.8.97)
-export const API_URL = 'http://10.107.8.97:5000/api';
+// Hotspot / Virtual Adapter: 192.168.137.1
+// Main Wi-Fi: 10.107.8.97
+export const API_URL = 'http://192.168.137.1:5000/api';
 
 type UserData = {
   id: number;
