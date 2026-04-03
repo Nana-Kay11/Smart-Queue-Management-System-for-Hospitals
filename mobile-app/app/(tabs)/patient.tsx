@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 
 export default function PatientDashboard() {
-  const [activeTicket, setActiveTicket] = useState(null);
+  const [activeTicket, setActiveTicket] = useState<{ department_name: string, ticket_number: string } | null>(null);
   const [peopleAhead, setPeopleAhead] = useState(0);
   const [loading, setLoading] = useState(false);
 

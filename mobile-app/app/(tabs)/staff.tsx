@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 
 export default function StaffDashboard() {
-  const [currentPatient, setCurrentPatient] = useState(null);
+  const [currentPatient, setCurrentPatient] = useState<{ ticket_number: string } | null>(null);
   const [queueLength, setQueueLength] = useState(5); // Mock number
   
   const handleCallNext = () => {
