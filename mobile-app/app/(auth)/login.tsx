@@ -1,108 +1,162 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import React, { useState, useContext } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
+import { AuthContext, API_URL } from '../../context/AuthContext';
+import axios from 'axios';
+import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/DesignSystem';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { login } = useContext(AuthContext);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    // We'll wire up the actual fetch here later
     if (!email || !password) {
       Alert.alert("Error", "Please fill in all fields.");
       return;
     }
-    // Mock login success for now
-    // router.replace('/(tabs)'); 
+
+    setLoading(true);
+    try {
+      const response = await axios.post(`${API_URL}/auth/login`, {
+        email,
+        password,
+      });
+
+      const { token, user } = response.data;
+      await login(token, user);
+    } catch (error: any) {
+      const message = error.response?.data?.error || "Login failed. Please check your credentials.";
+      Alert.alert("Login Error", message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Welcome Back</Text>
-      <Text style={styles.subtitle}>Sign in to join the queue</Text>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.headerContainer}>
+          <Text style={Typography.h1}>Welcome</Text>
+          <Text style={[Typography.body, { color: Colors.textSecondary, marginTop: Spacing.sm }]}>
+            Sign in to your account
+          </Text>
+        </View>
 
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Email address"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-      </View>
+        <View style={styles.formContainer}>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.label}>Email Address</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="name@example.com"
+              placeholderTextColor={Colors.textTertiary}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+          </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Log In</Text>
-      </TouchableOpacity>
+          <View style={styles.inputWrapper}>
+            <Text style={styles.label}>Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="••••••••"
+              placeholderTextColor={Colors.textTertiary}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+          </View>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>Don't have an account? </Text>
-        <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-          <Text style={styles.link}>Sign Up</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+          <TouchableOpacity 
+            style={[styles.button, loading && styles.buttonDisabled]} 
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={[Typography.button, styles.buttonText]}>Continue</Text>
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.footer}>
+            <Text style={[Typography.caption, { color: Colors.textSecondary }]}>New here? </Text>
+            <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+              <Text style={[Typography.caption, styles.link]}>Create an account</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 24,
+    backgroundColor: Colors.canvas,
+  },
+  scrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
+    paddingHorizontal: Spacing.xl,
+    paddingTop: 80,
+    paddingBottom: 40,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
+  headerContainer: {
+    marginBottom: Spacing.xxxl,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 32,
+  formContainer: {
+    width: '100%',
   },
-  inputContainer: {
-    marginBottom: 24,
+  inputWrapper: {
+    marginBottom: Spacing.lg,
+  },
+  label: {
+    ...Typography.caption,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    marginBottom: Spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   input: {
-    backgroundColor: '#f5f5f5',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 16,
+    backgroundColor: '#fff',
+    padding: Spacing.md,
+    borderRadius: Radius.md,
     fontSize: 16,
+    color: Colors.textPrimary,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
   },
   button: {
-    backgroundColor: '#0066cc',
-    padding: 16,
-    borderRadius: 8,
+    backgroundColor: Colors.brandPrimary,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
     alignItems: 'center',
+    marginTop: Spacing.xl,
+    ...Shadows.soft,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   buttonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
-  },
-  footerText: {
-    color: '#666',
+    marginTop: Spacing.xl,
   },
   link: {
-    color: '#0066cc',
-    fontWeight: 'bold',
+    color: Colors.brandPrimary,
+    fontWeight: '700',
   },
 });

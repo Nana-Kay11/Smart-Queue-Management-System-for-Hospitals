@@ -7,4 +7,9 @@ const pool = new Pool({
   }
 });
 
+// Added to prevent the server from crashing on connection drops
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+});
+
 module.exports = pool;

@@ -1,64 +1,172 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useContext } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, FlatList, Alert, ScrollView, Dimensions } from 'react-native';
+import axios from 'axios';
+import { AuthContext, API_URL } from '../../context/AuthContext';
+import { Colors, Typography, Spacing, Radius, Shadows } from '../../constants/DesignSystem';
+import { Ionicons } from '@expo/vector-icons';
+
+const { width } = Dimensions.get('window');
+
+// Department mapping for icons
+const DEPT_ICONS: any = {
+  'OPD Consultation': 'flashlight-outline',
+  'Pharmacy': 'medical-outline',
+  'Laboratory': 'flask-outline',
+  'Emergency': 'alert-circle-outline',
+  'Radiology': 'scan-outline'
+};
 
 export default function PatientDashboard() {
-  const [activeTicket, setActiveTicket] = useState<{ department_name: string, ticket_number: string } | null>(null);
+  const { authToken, user, logout } = useContext(AuthContext);
+  const [activeTicket, setActiveTicket] = useState<{ department_name: string, ticket_number: string, id: number } | null>(null);
   const [peopleAhead, setPeopleAhead] = useState(0);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [servicePoints, setServicePoints] = useState<any[]>([]);
+  const [showJoinList, setShowJoinList] = useState(false);
 
-  // Mock fetching queue status
-  const fetchStatus = () => {
-    setLoading(true);
-    setTimeout(() => {
-      // setActiveTicket({ ticket_number: 'OPD-005', department_name: 'OPD Consultation' });
-      // setPeopleAhead(4);
+  const fetchStatus = async () => {
+    if (!authToken) return;
+    try {
+      const response = await axios.get(`${API_URL}/queue/status`);
+      if (response.data.activeTicket) {
+        setActiveTicket(response.data.activeTicket);
+        setPeopleAhead(response.data.peopleAhead);
+        setShowJoinList(false);
+      } else {
+        setActiveTicket(null);
+        fetchServicePoints();
+      }
+    } catch (error) {
+      console.error('Fetch status error:', error);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
+  };
+
+  const fetchServicePoints = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/queue/service-points`);
+      setServicePoints(response.data.servicePoints);
+    } catch (error) {
+      console.error('Fetch service points error:', error);
+    }
   };
 
   useEffect(() => {
     fetchStatus();
-  }, []);
+    const interval = setInterval(fetchStatus, 10000);
+    return () => clearInterval(interval);
+  }, [authToken]);
 
-  const handleJoinQueue = () => {
-    // Navigate to Join Queue modal/screen (to be done soon)
-    alert("Select a department to join!");
+  const handleJoinQueue = async (servicePointId: number) => {
+    try {
+      setLoading(true);
+      const response = await axios.post(`${API_URL}/queue/join`, {
+        service_point_id: servicePointId
+      });
+      Alert.alert("Queue Joined", "You have successfully joined the queue.");
+      fetchStatus();
+    } catch (error: any) {
+      const message = error.response?.data?.error || "Failed to join queue.";
+      Alert.alert("Queue Error", message);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (loading && !activeTicket && servicePoints.length === 0) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.brandPrimary} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>My Queue Status</Text>
-      
-      {loading ? (
-        <ActivityIndicator size="large" color="#0066cc" />
-      ) : activeTicket ? (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{activeTicket.department_name}</Text>
-          <Text style={styles.ticketNumber}>{activeTicket.ticket_number}</Text>
-          
-          <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{peopleAhead}</Text>
-              <Text style={styles.statLabel}>People Ahead</Text>
+      <View style={styles.headerRow}>
+        <View>
+          <Text style={[Typography.body, { color: Colors.textSecondary }]}>Welcome,</Text>
+          <Text style={Typography.h2}>{user?.name?.split(' ')[0]}</Text>
+        </View>
+        <TouchableOpacity style={styles.iconBtn} onPress={logout}>
+          <Ionicons name="log-out-outline" size={24} color={Colors.brandPrimary} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+        {activeTicket ? (
+          <View style={styles.ticketSection}>
+            <Text style={[Typography.caption, styles.sectionTitle]}>ACTIVE TICKET</Text>
+            <View style={styles.glassCard}>
+              <View style={styles.glassHeader}>
+                <Ionicons name={DEPT_ICONS[activeTicket.department_name] || 'medical'} size={24} color={Colors.brandPrimary} />
+                <Text style={[Typography.body, { fontWeight: '600', marginLeft: Spacing.sm }]}>
+                  {activeTicket.department_name}
+                </Text>
+              </View>
+              
+              <Text style={styles.ticketNumber}>{activeTicket.ticket_number}</Text>
+              
+              <View style={styles.statsContainer}>
+                <View style={styles.statLine}>
+                  <Text style={[Typography.caption, { color: Colors.textSecondary }]}>PEOPLE AHEAD</Text>
+                  <Text style={Typography.h3}>{peopleAhead}</Text>
+                </View>
+                <View style={styles.statLine}>
+                  <Text style={[Typography.caption, { color: Colors.textSecondary }]}>EST. WAIT TIME</Text>
+                  <Text style={[Typography.h3, { color: Colors.brandPrimary }]}>{peopleAhead * 5} min</Text>
+                </View>
+              </View>
+
+              <View style={styles.timeline}>
+                <View style={[styles.timelineNode, styles.nodeComplete]} />
+                <View style={[styles.timelineLine, styles.nodeComplete]} />
+                <View style={[styles.timelineNode, styles.nodeActive]} />
+                <View style={styles.timelineLine} />
+                <View style={styles.timelineNode} />
+              </View>
+              <View style={styles.timelineLabels}>
+                <Text style={Typography.caption}>Joined</Text>
+                <Text style={[Typography.caption, { color: Colors.brandPrimary, fontWeight: '700' }]}>Waiting</Text>
+                <Text style={Typography.caption}>Serving</Text>
+              </View>
             </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statValue}>{peopleAhead * 5} min</Text>
-              <Text style={styles.statLabel}>Est. Wait</Text>
+
+            <TouchableOpacity style={styles.refreshBtn} onPress={fetchStatus}>
+              <Ionicons name="refresh" size={18} color={Colors.textSecondary} />
+              <Text style={[Typography.caption, { marginLeft: 4, fontWeight: '600' }]}>REFRESH STATUS</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.joinSection}>
+            <Text style={[Typography.caption, styles.sectionTitle]}>SELECT DEPARTMENT</Text>
+            <View style={styles.grid}>
+              {servicePoints.map((item) => (
+                <TouchableOpacity 
+                  key={item.id} 
+                  style={styles.gridItem}
+                  onPress={() => handleJoinQueue(item.id)}
+                >
+                  <View style={styles.gridIcon}>
+                    <Ionicons name={DEPT_ICONS[item.department_name] || 'medical'} size={28} color={Colors.brandPrimary} />
+                  </View>
+                  <Text style={[Typography.caption, styles.gridText]} numberOfLines={1}>
+                    {item.department_name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
+        )}
 
-          <TouchableOpacity style={styles.refreshBtn} onPress={fetchStatus}>
-            <Text style={styles.refreshBtnText}>Refresh Status</Text>
-          </TouchableOpacity>
+        <View style={styles.infoCard}>
+          <Ionicons name="information-circle-outline" size={20} color={Colors.brandPrimary} />
+          <Text style={[Typography.caption, { marginLeft: 8, flex: 1 }]}>
+            Your position is updated in real-time. Please stay within range of the department.
+          </Text>
         </View>
-      ) : (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>You are not currently in any queue.</Text>
-          <TouchableOpacity style={styles.joinBtn} onPress={handleJoinQueue}>
-            <Text style={styles.joinBtnText}>Join a Queue</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      </ScrollView>
     </View>
   );
 }
@@ -66,92 +174,142 @@ export default function PatientDashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: Colors.canvas,
+    paddingTop: 60,
   },
-  header: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 24,
-    color: '#333'
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  cardTitle: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 8,
-  },
-  ticketNumber: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: '#0066cc',
-    letterSpacing: 2,
-    marginBottom: 24,
-  },
-  statsRow: {
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '100%',
-    marginBottom: 24,
-  },
-  statBox: {
-    flex: 1,
     alignItems: 'center',
-    backgroundColor: '#f0f8ff',
-    padding: 16,
-    borderRadius: 12,
-    marginHorizontal: 8,
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing.lg,
   },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+  scrollContent: {
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: Spacing.xxxl,
   },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
+  iconBtn: {
+    backgroundColor: '#fff',
+    padding: Spacing.sm,
+    borderRadius: Radius.md,
+    ...Shadows.soft,
   },
-  refreshBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#0066cc',
+  ticketSection: {
+    flex: 1,
   },
-  refreshBtnText: {
-    color: '#0066cc',
-    fontWeight: 'bold',
+  joinSection: {
+    flex: 1,
   },
-  emptyState: {
+  sectionTitle: {
+    letterSpacing: 1.5,
+    marginBottom: Spacing.md,
+    color: Colors.textTertiary,
+  },
+  glassCard: {
+    backgroundColor: '#fff',
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    ...Shadows.medium,
+    marginBottom: Spacing.md,
+  },
+  glassHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.xl,
+  },
+  ticketNumber: {
+    ...Typography.h1,
+    fontSize: 56,
+    textAlign: 'center',
+    color: Colors.brandPrimary,
+    letterSpacing: 2,
+    marginVertical: Spacing.lg,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.md,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: Colors.borderLight,
+    marginBottom: Spacing.xl,
+  },
+  statLine: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  timeline: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 48,
+    paddingHorizontal: Spacing.xl,
+    marginBottom: Spacing.sm,
   },
-  emptyText: {
-    fontSize: 16,
-    color: '#888',
-    marginBottom: 24,
+  timelineNode: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#eee',
   },
-  joinBtn: {
-    backgroundColor: '#0066cc',
-    paddingVertical: 16,
-    paddingHorizontal: 32,
+  nodeComplete: {
+    backgroundColor: Colors.brandPrimary,
+  },
+  nodeActive: {
+    backgroundColor: Colors.brandPrimary,
+    width: 16,
+    height: 16,
     borderRadius: 8,
+    borderWidth: 3,
+    borderColor: '#fff',
+    ...Shadows.soft,
   },
-  joinBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+  timelineLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: '#eee',
+    marginHorizontal: -2,
+  },
+  timelineLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.sm,
+  },
+  refreshBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.md,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  gridItem: {
+    width: (width - Spacing.xl * 2 - Spacing.md) / 2,
+    backgroundColor: '#fff',
+    padding: Spacing.lg,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    ...Shadows.soft,
+  },
+  gridIcon: {
+    backgroundColor: Colors.canvas,
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    marginBottom: Spacing.md,
+  },
+  gridText: {
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  infoCard: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(122, 139, 153, 0.05)',
+    padding: Spacing.md,
+    borderRadius: Radius.md,
+    alignItems: 'center',
+    marginTop: Spacing.xl,
   }
 });

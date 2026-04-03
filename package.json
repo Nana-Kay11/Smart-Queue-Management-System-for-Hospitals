@@ -1,0 +1,28 @@
+{
+  "name": "smart-queue-management-system-for-hospitals",
+  "version": "1.0.0",
+  "description": "Final Year Project",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run backend\" \"npm run mobile\"",
+    "dev:all": "npm run dev",
+    "backend": "cd backend && node server.js",
+    "mobile": "cd mobile-app && npm start",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nana-Kay11/Smart-Queue-Management-System-for-Hospitals.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Nana-Kay11/Smart-Queue-Management-System-for-Hospitals/issues"
+  },
+  "homepage": "https://github.com/Nana-Kay11/Smart-Queue-Management-System-for-Hospitals#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
