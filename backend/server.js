@@ -19,10 +19,19 @@ const queueRoutes = require('./routes/queue');
 app.use('/api/auth', authRoutes);
 app.use('/api/queue', queueRoutes);
 
-// Test connection
-pool.connect()
+// Test connection (using query instead of connect to avoid leaking clients)
+pool.query('SELECT NOW()')
   .then(() => console.log('✅ Connected to Neon PostgreSQL database'))
   .catch(err => console.error('❌ Database connection error', err.stack));
+
+// Global process safety net
+process.on('uncaughtException', (err) => {
+  console.error('💥 Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🧨 Unhandled Rejection at:', promise, 'reason:', reason);
+});
 
 // Basic Route
 app.get('/', (req, res) => {

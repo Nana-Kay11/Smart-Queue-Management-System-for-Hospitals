@@ -19,13 +19,17 @@ function RootLayoutNav() {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const isRoot = !segments || (segments as string[]).length === 0;
 
-    if (!authToken && !inAuthGroup) {
-      router.replace('/(auth)/login');
-    } else if (authToken && inAuthGroup) {
-      router.replace('/(tabs)/patient');
+    if (!authToken && !inAuthGroup && !isRoot) {
+      // Not logged in, not on auth, and not on landing? Go to landing.
+      router.replace('/');
+    } else if (authToken && (inAuthGroup || isRoot)) {
+      // Logged in, but on landing or auth? Go to dashboard.
+      const target = user?.role === 'staff' ? '/(tabs)/staff' : '/(tabs)/patient' as any;
+      router.replace(target);
     }
-  }, [authToken, segments, isLoading]);
+  }, [authToken, segments, isLoading, user]);
 
   if (isLoading) {
     return (
@@ -52,9 +56,10 @@ function RootLayoutNav() {
           animation: 'fade_from_bottom',
         }}
       >
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)/register" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)/login" options={{ headerShown: false, presentation: 'modal' }} />
+        <Stack.Screen name="(auth)/register" options={{ headerShown: false, presentation: 'modal' }} />
         <Stack.Screen name="(auth)/verify" options={{ title: 'Verify', headerBackTitle: 'Back' }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
       </Stack>
