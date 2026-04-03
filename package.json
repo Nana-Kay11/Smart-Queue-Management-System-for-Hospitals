@@ -4,7 +4,7 @@
   "description": "Final Year Project",
   "main": "index.js",
   "scripts": {
-    "dev": "concurrently \"npm run backend\" \"npm run mobile\"",
+    "dev": "concurrently --raw \"npm run backend\" \"npm run mobile\"",
     "dev:all": "npm run dev",
     "backend": "cd backend && node server.js",
     "mobile": "cd mobile-app && npm start",
