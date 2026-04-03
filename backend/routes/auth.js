@@ -13,6 +13,7 @@ const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString()
 // Register user and send OTP
 router.post('/register', async (req, res) => {
   const { name, email, password, role } = req.body;
+  console.log(`📝 Registration attempt: ${email} (${name})`);
   
   if (!name || !email || !password) {
     return res.status(400).json({ error: 'Name, email, and password are required' });
@@ -22,6 +23,7 @@ router.post('/register', async (req, res) => {
     // 1. Check if user already exists
     const userCheck = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     if (userCheck.rows.length > 0) {
+      console.log(`⚠️ Email already registered: ${email}`);
       return res.status(400).json({ error: 'User with this email already exists' });
     }
 
@@ -39,6 +41,7 @@ router.post('/register', async (req, res) => {
     // 4. Generate OTP & Hash it
     const otp = generateOTP();
     const otpHash = await bcrypt.hash(otp, salt);
+    console.log(`🔑 Verification OTP for ${email}: ${otp} (Valid for 10 mins)`);
 
     // 5. Save OTP to DB (Expires in 10 minutes)
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
@@ -51,15 +54,13 @@ router.post('/register', async (req, res) => {
     try {
       await sendOTP(email, otp);
     } catch (emailError) {
-      // If email fails, you might want to delete the user or handle it, 
-      // but for this MVP we just log it and still tell the frontend to verify.
-      console.log('Continuing without email due to config or network issue...');
+      console.log('⚠️ Email skipped: using terminal OTP for local testing.');
     }
 
-    res.status(201).json({ message: 'User registered! Please check email for OTP.', userId: user.id });
+    res.status(201).json({ message: 'User registered! Please check the server terminal for your OTP.', userId: user.id });
   } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({ error: 'Server error during registration' });
+    console.error('❌ Registration system error:', error);
+    res.status(500).json({ error: 'Critical server error during registration. Check terminal logs.' });
   }
 });
 

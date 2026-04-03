@@ -30,7 +30,15 @@ export default function RegisterScreen() {
       Alert.alert("Account Created", "Please verify your email to continue.");
       router.push({ pathname: '/(auth)/verify', params: { email, userId: response.data.userId } });
     } catch (error: any) {
-      const message = error.response?.data?.error || "Registration failed. Please try again.";
+      console.error('Registration error detail:', error);
+      let message = "Registration failed. Please try again.";
+      
+      if (error.response?.data?.error) {
+        message = error.response.data.error;
+      } else if (error.message === 'Network Error') {
+        message = "Network Error: Unable to connect to the server. Check your connection or API_URL in context/AuthContext.tsx";
+      }
+      
       Alert.alert("Registration Error", message);
     } finally {
       setLoading(false);

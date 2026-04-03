@@ -2,9 +2,11 @@ import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
-// URL for testing on Android Emulator (10.0.2.2 usually maps to localhost on host machine)
-// For iOS Simulator, use localhost or your local IP address.
-export const API_URL = 'http://10.0.2.2:5000/api';
+// URL for testing:
+// Android Emulator: 10.0.2.2
+// iOS Simulator: localhost
+// Real Device (Expo Go): Your computer's local IP (e.g., 10.107.8.97)
+export const API_URL = 'http://10.107.8.97:5000/api';
 
 type UserData = {
   id: number;

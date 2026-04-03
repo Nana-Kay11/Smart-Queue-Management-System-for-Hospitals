@@ -9,6 +9,11 @@ const transporter = nodemailer.createTransport({
 });
 
 const sendOTP = async (toEmail, otp) => {
+  if (!process.env.EMAIL_USER || process.env.EMAIL_USER === 'your-email@gmail.com') {
+    console.log('💡 Email skip: No valid EMAIL_USER configured in .env.');
+    return; // Silently skip if not configured
+  }
+
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: toEmail,
@@ -29,8 +34,8 @@ const sendOTP = async (toEmail, otp) => {
     await transporter.sendMail(mailOptions);
     console.log(`✅ OTP Email sent to ${toEmail}`);
   } catch (error) {
-    console.error('❌ Error sending OTP email:', error);
-    throw new Error('Failed to send OTP email');
+    console.error('❌ Error sending OTP email:', error.message);
+    // Don't throw, just log. The auth route handles the logic of continuing.
   }
 };
 
