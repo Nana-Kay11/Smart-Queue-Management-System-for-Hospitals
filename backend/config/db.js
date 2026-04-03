@@ -5,15 +5,22 @@ const pool = new Pool({
   ssl: {
     rejectUnauthorized: false
   },
-  // Robust settings for serverless (Neon)
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+  // Aggressive settings for Neon Serverless
+  max: 6, // Keep pool small for reliability
+  idleTimeoutMillis: 10000, // Drop idle connections quickly (10s)
+  connectionTimeoutMillis: 10000,
 });
 
-// Added to prevent the server from crashing on connection drops
+// Critical pool error handler
 pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
+  console.error('🌊 Pool Error (Catch-All):', err.message);
+});
+
+// Shield individual clients
+pool.on('connect', (client) => {
+  client.on('error', (err) => {
+    console.error('🛡️ Client Error (Catch-All):', err.message);
+  });
 });
 
 module.exports = pool;

@@ -1,7 +1,7 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useContext, useState } from 'react';
+import { useEffect, useContext } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import 'react-native-reanimated';
 
@@ -18,16 +18,19 @@ function RootLayoutNav() {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
-    const isRoot = !segments || (segments as string[]).length === 0;
+    const segmentsList = (segments || []) as string[];
+    const inAuthGroup = segmentsList[0] === '(auth)';
+    const isRoot = segmentsList.length === 0;
+    const inUserGroup = segmentsList[0] === '(patient)' || segmentsList[0] === '(staff)';
 
     if (!authToken && !inAuthGroup && !isRoot) {
       // Not logged in, not on auth, and not on landing? Go to landing.
       router.replace('/');
-    } else if (authToken && (inAuthGroup || isRoot)) {
-      // Logged in, but on landing or auth? Go to dashboard.
-      const target = user?.role === 'staff' ? '/(tabs)/staff' : '/(tabs)/patient' as any;
-      router.replace(target);
+    } else if (authToken && !inUserGroup) {
+      // Logged in, but not in a role-specific folder? Redirect.
+      const target = user?.role === 'staff' ? '/(staff)/' : '/(patient)/';
+      // Use standard navigation to avoid TS issues with string templating
+      router.replace(target as any);
     }
   }, [authToken, segments, isLoading, user]);
 
@@ -57,7 +60,8 @@ function RootLayoutNav() {
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(patient)" options={{ headerShown: false }} />
+        <Stack.Screen name="(staff)" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)/login" options={{ headerShown: false, presentation: 'modal' }} />
         <Stack.Screen name="(auth)/register" options={{ headerShown: false, presentation: 'modal' }} />
         <Stack.Screen name="(auth)/verify" options={{ title: 'Verify', headerBackTitle: 'Back' }} />
